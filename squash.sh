@@ -7,20 +7,40 @@ while [ ! $# -eq 0 ]; do
 		case "$1" in
 			# User wants to saved mongodb credentials to file
 			add-cred)
-				if [ "$2" != "--url"] && [ "$4" != "--alias"]; then
-					echo "Correct Usage for storing a DB is: add-cred --url 'dburl' --alias 'alias'"
+				shift
+				ARGCOUNT=0
+				while [[ ! $# -eq 0 ]] && [[ "$1" = --* ]]; do
+					flag="$1"
+					((ARGCOUNT++))
+					shift
+					case "$flag" in
+						"--url")
+							if [[ "$1" = --* ]]; then
+								echo "must supply an argument for --url flag"
+								exit 1
+							else
+								CONNECT_URL="$1"
+								shift
+							fi;;
+						"--alias")
+							if [[ "$1" = --* ]]; then
+								echo "must supply an argument for --alias flag"
+								exit 1
+							else
+								DATABASE_ALIAS="$1"
+							fi;;
+					esac
+				done
+				if [[ ! ARGCOUNT -eq 2 ]]; then
+					echo "not enough args"
 					exit 1
 				else
-					CONNECT_URL=$3
-					DATABASE_ALIAS=$5
-					#creates if it does not exist and appends credentials if it does in format alias=dbURL
 					echo "$DATABASE_ALIAS=$CONNECT_URL" >>$CREDENTIALS_FILE
 					echo "Sucessfully added credentials to $CREDENTIALS_FILE"
 				fi
 				exit
-				;;
 			
-			# adding a user requires a dbURL, username, pass, database name and roles
+			# Case that we want to add a user to the Database
 			add-user)
 				shift
 				ARGCOUNT=0
@@ -74,6 +94,7 @@ while [ ! $# -eq 0 ]; do
 				# If we get here then flags have been provided with proper arguments but we want all 5 args.
 				if [[ ! $ARGCOUNT -eq 5 ]]; then
 					echo "not enough args"
+					exit 1
 				fi
 				# Restore to prevIFS to build string with commas
 				IFS=$prevIFS
