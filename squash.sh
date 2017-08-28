@@ -3,7 +3,7 @@ CREDENTIALS_FILE=.mongo_credentials
 #Saves original state for string manipulation later (line 82)
 prevIFS=IFS
 # While there are not 0 arguments
-while [ ! $# -eq 0 ]; do
+while [[ ! $# -eq 0 ]]; do
 		case "$1" in
 			# User wants to saved mongodb credentials to file
 			add-cred)
@@ -28,9 +28,10 @@ while [ ! $# -eq 0 ]; do
 								exit 1
 							else
 								DATABASE_ALIAS="$1"
+								shift
 							fi;;
 					esac
-				done
+				done # end of while loop for add-cred args
 				if [[ ! ARGCOUNT -eq 2 ]]; then
 					echo "not enough args"
 					exit 1
@@ -38,7 +39,8 @@ while [ ! $# -eq 0 ]; do
 					echo "$DATABASE_ALIAS=$CONNECT_URL" >>$CREDENTIALS_FILE
 					echo "Sucessfully added credentials to $CREDENTIALS_FILE"
 				fi
-				exit
+			exit
+			;;
 			
 			# Case that we want to add a user to the Database
 			add-user)
@@ -91,11 +93,21 @@ while [ ! $# -eq 0 ]; do
 							fi;;
 					esac
 				done # end while loop checking for flags	
+				
 				# If we get here then flags have been provided with proper arguments but we want all 5 args.
 				if [[ ! $ARGCOUNT -eq 5 ]]; then
 					echo "not enough args"
 					exit 1
 				fi
+
+				# We want to make sure the DBALIAS exists in the cred file
+				if TEMP=`grep -w $DBALIAS $CREDENTIALS_FILE`; then
+					TEMP=${TEMP##*=}
+				else
+					echo "Database URL not found, please use add-cred to store mongo url and alias"
+					exit 1
+				fi
+
 				# Restore to prevIFS to build string with commas
 				IFS=$prevIFS
 				ROLE_STRING=""
@@ -103,9 +115,11 @@ while [ ! $# -eq 0 ]; do
 				for i in ${ROLES[@]}; do
 					ROLE_STRING=$ROLE_STRING"'$i',"	
 				done
+				
 				ROLE_STRING="${ROLE_STRING%?}"
 				# Finally, execute the mongo command to add a user
 				mongo $TEMP --eval "db.getSiblingDB('$DBNAME').createUser({ user: '$USER', pwd: '$PASS', roles: [$ROLE_STRING] });"
+			
 			exit # exit add-user case
 		esac
 done
