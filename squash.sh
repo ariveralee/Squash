@@ -1,9 +1,9 @@
-# Where Connection URL's with Alias's will be written to
-CREDENTIALS_FILE=.mongo_credentials
-TEMP_FILE=.mongo_credentials.tmp
+# The credentials will be stored in the home directory.
+CREDENTIALS_FILE="$HOME/.mongo_credentials"
 #Saves original state for string manipulation later (line 82)
 prevIFS=IFS
-# While there are not 0 arguments
+
+# While the arguments != 0
 while [[ ! $# -eq 0 ]]; do
   case "$1" in
 		# User wants to saved mongodb credentials to file
@@ -16,7 +16,7 @@ while [[ ! $# -eq 0 ]]; do
 				shift
 				case "$flag" in
 					"--url")
-						if [[ "$1" = --* ]]; then
+						if [[ -z "$1" ]]; then
 							echo "must supply an argument for --url flag"
 							exit 1
 						else
@@ -24,7 +24,7 @@ while [[ ! $# -eq 0 ]]; do
 							shift
 						fi;;
 					"--alias")
-						if [[ "$1" = --* ]]; then
+						if [[ -z "$1" ]]; then
 							echo "must supply an argument for --alias flag"
 							exit 1
 						else
@@ -38,9 +38,15 @@ while [[ ! $# -eq 0 ]]; do
 				echo "not enough args"
 				exit 1
 			else
-				echo "$DATABASE_ALIAS=$CONNECT_URL" >>$CREDENTIALS_FILE
-				echo "Sucessfully added credentials to $CREDENTIALS_FILE"
-			fi
+				if CRED="$(grep -w ${DATABASE_ALIAS}=${CONNECT_URL} ${CREDENTIALS_FILE})"; then
+					echo "Entry: $CRED already exists!"
+				else 
+					echo "Writing credentials to file now... "
+					echo "$DATABASE_ALIAS=$CONNECT_URL" >>$CREDENTIALS_FILE
+				
+				fi #End of checking for cred 
+
+			fi # End of arg check
 		exit
 		;;
 		
@@ -54,13 +60,13 @@ while [[ ! $# -eq 0 ]]; do
 				shift
 				case "$flag" in
 					"--alias")
-						if [[ -z $1 ]]; then
+						if [[ -z "$1" ]]; then
 							echo "must provide an alias to remove"
 							exit 1
 						else 
 							DATABASE_ALIAS="$1"
 							# We want to make sure the DBALIAS exists in the cred file
-							if ALIAS_URL=`grep -w ${DATABASE_ALIAS} ${CREDENTIALS_FILE}`; then
+							if ALIAS_URL="$(grep -w ${DATABASE_ALIAS} ${CREDENTIALS_FILE})"; then
 								ALIAS_URL=${ALIAS_URL##*=}
 							else
 								echo "Database URL not found! Check to see if you have the right alias"
@@ -69,13 +75,11 @@ while [[ ! $# -eq 0 ]]; do
 							shift
 						fi
 				esac
-			done # While loop looking for args 
-			
+			done
 			if [[ ! $ARGCOUNT -eq 1 ]]; then
 				echo "not enough args"
 				exit 1
 			fi
-			
 			# Lets confirm this is the record they want to erase
       echo "Are you sure you want to delete ${DATABASE_ALIAS}: ${ALIAS_URL}?
       [ y | n ] then press ENTER"
@@ -84,11 +88,18 @@ while [[ ! $# -eq 0 ]]; do
       	echo "exiting..."
       	exit 1
       else
+      	# create whole string to find
       	TEMP=$TEMP"${DATABASE_ALIAS}=""${ALIAS_URL}"
-      	echo "${TEMP}"
-      	touch "${TEMP_FILE}"
-      	grep -Fv "${TEMP}" "${CREDENTIALS_FILE}" > "${TEMP_FILE}"
-      	mv "${TEMP_FILE}" "${CREDENTIALS_FILE}"
+      	
+      	# Add line numbers to entry, grep the string and store it's line number
+      	LINE_NUM="$(cat -n "${CREDENTIALS_FILE}" | grep -w "${DATABASE_ALIAS}" | awk '{ print $1 }')" 
+      	
+      	# TO_WRITE stores the contents minus what we removed
+      	TO_WRITE="$(sed "${LINE_NUM}d" "${CREDENTIALS_FILE}")"
+      	
+      	# Overwrites the file with new contents.
+      	echo "${TO_WRITE}" > "${CREDENTIALS_FILE}"
+      	
       	echo "Removed entry"
       fi
 		exit;; # Exit delete cred case
@@ -102,40 +113,50 @@ while [[ ! $# -eq 0 ]]; do
 				((ARGCOUNT++))
 				shift			
 				case "$flag" in
+					
+					# Connection string
 					"--use")
-						if [[ "$1" = --* ]]; then
+						if [[ "$1" = --* ]] || [[ -z "$1" ]]; then
 							echo "must supply an argument for --use flag"
 							exit 1
 						else
 							DATABASE_ALIAS="$1"
 							shift
 						fi;;
+					
+					# User name
 					"--user")
-						if [[ "$1" = --* ]]; then
+						if [[ "$1" = --* ]] || [[ -z "$1" ]]; then
 							echo "must supply an argument for --user flag"
 							exit 1
 						else
 							USER="$1"
 							shift
 						fi;;
+					
+					# User's password
 					"--pass")
-						if [[ "$1" = --* ]]; then
+						if [[ "$1" = --* ]] || [[ -z "$1" ]]; then
 							echo "must supply an argument for --pass flag"
 							exit 1
 						else
 							PASS="$1"
 							shift
 						fi;;
+					
+					# Database you want credentials added to
 					"--db")
-						if [[ "$1" = --* ]]; then
+						if [[ "$1" = --* ]] || [[ -z "$1" ]]; then
 							echo "must supply an argument for --db flag"
 							exit 1
 						else
 							DBNAME="$1"
 							shift
 						fi;;
+					
+					#Users roles
 					"--roles")
-						if [[ "$1" = --* ]]; then
+						if [[ "$1" = --* ]] || [[ -z "$1" ]]; then
 							echo "must supply an argument for --roles flag"
 							exit 1
 						else
@@ -152,7 +173,7 @@ while [[ ! $# -eq 0 ]]; do
 			fi
 
 			# We want to make sure the DBALIAS exists in the cred file
-			if ALIAS_URL="$(grep -w "$(DATABASE_ALIAS)" "$(CREDENTIALS_FILE)")"; then
+			if ALIAS_URL="$(grep -w "${DATABASE_ALIAS}" "${CREDENTIALS_FILE}")"; then
 				ALIAS_URL=${ALIAS_URL##*=}
 			else
 				echo "Database URL not found, please use add-cred to store mongo url and alias"
@@ -166,11 +187,13 @@ while [[ ! $# -eq 0 ]]; do
 			for i in ${ROLES[@]}; do
 				ROLE_STRING=$ROLE_STRING"'$i',"	
 			done
-				
+			
+			# removes extra comma from last role.	
 			ROLE_STRING="${ROLE_STRING%?}"
-			# Finally, execute the mongo command to add a user
+			
+			# FINALLY, execute the mongo command to add a user
 			mongo $ALIAS_URL --eval "db.getSiblingDB('$DBNAME').createUser({ user: '$USER', pwd: '$PASS', roles: [$ROLE_STRING] });"
 			
 		exit # exit add-user case
 	esac
-done
+done #exit main while loop.
