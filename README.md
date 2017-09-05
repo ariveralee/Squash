@@ -7,6 +7,7 @@ A script that allows for the managing of multiple mongodb credentials as well as
 ## Usage
 
 There are several commands for this script:
+
 	- add-cred
 	- del-cred
 	- add-user
