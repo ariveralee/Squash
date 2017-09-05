@@ -38,14 +38,18 @@ while [[ ! $# -eq 0 ]]; do
 				echo "not enough args"
 				exit 1
 			else
-				if CRED="$(grep -w ${DATABASE_ALIAS}=${CONNECT_URL} ${CREDENTIALS_FILE})"; then
-					echo "Entry: $CRED already exists!"
-				else 
-					echo "Writing credentials to file now... "
-					echo "$DATABASE_ALIAS=$CONNECT_URL" >>$CREDENTIALS_FILE
+				if CHECK="$(grep -w ${DATABASE_ALIAS} ${CREDENTIALS_FILE})"; then
+					echo "That alias already exists"
+					exit 1
+				elif CHECK="$(grep -w ${CONNECT_URL} ${CREDENTIALS_FILE})"; then
+					echo "That connection URL already exists"
+					exit 1
+				fi
 				
-				fi #End of checking for cred 
-
+				# If we reach here then our alias and connect url are unique
+				echo "Writing credentials to file now... "
+				echo "$DATABASE_ALIAS=$CONNECT_URL" >>$CREDENTIALS_FILE
+				
 			fi # End of arg check
 		exit
 		;;
