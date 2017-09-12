@@ -1,11 +1,24 @@
+#!/bin/bash
+
 # The credentials will be stored in the home directory.
 CREDENTIALS_FILE="$HOME/.mongo_credentials"
 #Saves original state for string manipulation later (line 82)
 prevIFS=IFS
 
+#checks if args are empty
+if [[ -z "$1" ]]; then
+	echo "No argument was supplied use 'squash help' for usage"
+	exit 1
+fi
+
 # While the arguments != 0
 while [[ ! $# -eq 0 ]]; do
   case "$1" in
+		#displays usage for squash
+		help)
+			cat ./help.txt
+		exit;;
+		
 		# User wants to saved mongodb credentials to file
 		add-cred)
 			shift
@@ -35,7 +48,7 @@ while [[ ! $# -eq 0 ]]; do
 			done # end of while loop for add-cred args
 			
 			if [[ ! ARGCOUNT -eq 2 ]]; then
-				echo "not enough args"
+				echo -e "Not enough args. Use 'squash help' for usage\n"
 				exit 1
 			else
 				if CHECK="$(grep -w ${DATABASE_ALIAS} ${CREDENTIALS_FILE})"; then
@@ -51,8 +64,7 @@ while [[ ! $# -eq 0 ]]; do
 				echo "$DATABASE_ALIAS=$CONNECT_URL" >>$CREDENTIALS_FILE
 				
 			fi # End of arg check
-		exit
-		;;
+		exit;;
 		
 		# User wants to remove mongo credential
 		del-cred)
@@ -81,7 +93,7 @@ while [[ ! $# -eq 0 ]]; do
 				esac
 			done
 			if [[ ! $ARGCOUNT -eq 1 ]]; then
-				echo "not enough args"
+				echo -e "Not enough args. Use 'squash help' for usage\n"
 				exit 1
 			fi
 			# Lets confirm this is the record they want to erase
@@ -172,7 +184,7 @@ while [[ ! $# -eq 0 ]]; do
 				
 			# If we get here then flags have been provided with proper arguments but we want all 5 args.
 			if [[ ! $ARGCOUNT -eq 5 ]]; then
-				echo "not enough args"
+				echo -e "Not enough args. Use 'squash help' for usage\n"
 				exit 1
 			fi
 
@@ -197,7 +209,13 @@ while [[ ! $# -eq 0 ]]; do
 			
 			# FINALLY, execute the mongo command to add a user
 			mongo $ALIAS_URL --eval "db.getSiblingDB('$DBNAME').createUser({ user: '$USER', pwd: '$PASS', roles: [$ROLE_STRING] });"
-			
-		exit # exit add-user case
+		
+		exit;; # exit add-user case
+
+		# Any other command throws an error
+		*)
+			echo -e "'$1' is not a squash command. Use 'squash help' for usage\n"
+
+		exit # exit unknown command case
 	esac
 done #exit main while loop.

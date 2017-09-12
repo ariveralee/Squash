@@ -1,0 +1,17 @@
+
+usage: squash [command] [--args]
+
+Here are the common commands for squash:
+
+adding mongo credentials)
+squash add-cred --alias <myalias> --url <connectionurl>
+
+removing mongo credentials)
+squash del-cred --alias <myalias> --url <connectionurl>
+
+adding user to mongo database)
+squash add-user --use <alias> --user <username> --pass <password> --db <database> --roles <role1,role2>
+
+getting help)
+squash --help
+
